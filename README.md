@@ -12,7 +12,9 @@ positional arguments:
 
 optional arguments:
   -h, --help         show this help message and exit
-  --suffix [SUFFIX]  suffix to add (original_file_name{suffix}{ext})
+  --suffix [SUFFIX]  suffix to add (original_file_name{suffix}{ext}) (default:
+                     _artisan)
   --ext [EXT]        extension to use (original_file_name{suffix}{ext})
-  --unit [UNIT]      unit to use (C/F)
+                     (default: .tsv)
+  --unit [UNIT]      unit to use (C/F) (default: C)
 ```

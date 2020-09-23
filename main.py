@@ -39,7 +39,7 @@ def main(in_file_path, suffix, extension, unit):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Transform rubasse csv files to artisan csv format')
+    parser = argparse.ArgumentParser(description='Transform rubasse csv files to artisan csv format', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('file', help='path of file to transform (relative or absolute)', type=str)
     parser.add_argument('--suffix', nargs="?", default=DEFAULT_SUFFIX,
                         help='suffix to add (original_file_name{suffix}{ext})',
