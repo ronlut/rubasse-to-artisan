@@ -1,7 +1,6 @@
 import argparse
 import csv
-
-from pathlib2 import Path
+import os
 
 DEFAULT_SUFFIX = "_artisan"
 DEFAULT_EXTENSION = ".tsv"
@@ -25,9 +24,11 @@ def transform_data(row):
 
 
 def main(in_file_path, suffix, extension, unit):
-    in_file = Path.cwd().joinpath(in_file_path)
-    out_file = in_file.with_name(in_file.stem + suffix + extension)
-    with in_file.open('r') as rf, out_file.open('w') as wf:
+    in_file = os.path.join(os.getcwd(), in_file_path)
+    dirname, basename = os.path.split(in_file)
+    name, _ = os.path.splitext(basename)
+    out_file = os.path.join(dirname, name + suffix + extension)
+    with open(in_file, 'r') as rf, open(out_file, 'w') as wf:
         reader = csv.reader(rf, delimiter=',')
         writer = csv.writer(wf, delimiter='\t', lineterminator='\n')
         _ = next(reader)  # useless headers
