@@ -2,25 +2,80 @@ import argparse
 import csv
 import os
 
+CHARGE_ELAPSED = 0
+
 DEFAULT_SUFFIX = "_artisan"
 DEFAULT_EXTENSION = ".tsv"
 DEFAULT_UNIT = "C"
-HEADERS = ["Time1", "Time2", "BT", "ET", "Event"]
+HEADERS = ["Time1", "Time2", "BT", "ET", "Event", "Wind", "Fire", "RoR", "RPM", "Hum", "Pressure"]
 
 
-def metadata(unit):
-    return ["Date:", "Unit:%s" % unit, "CHARGE:", "TP:", "DRYe:", "FCs:", "FCe:", "SCs:", "SCe:", "DROP:", "COOL:",
+class Events:
+    def __init__(self, charge, tp, fc, sc, drop):
+        self.charge = charge
+        self.tp = tp
+        self.fc = fc
+        self.sc = sc
+        self.drop = drop
+
+        self.artisan_events = {
+            charge: "Charge",
+        }
+
+        for elapsed, event in zip([tp, fc, sc, drop], ["TP", "FCs", "SCs", "Drop"]):
+            if not elapsed or elapsed == 0:
+                continue
+
+            self.artisan_events[elapsed] = event
+
+    def from_elapsed(self, seconds):
+        return self.artisan_events.get(seconds)
+
+
+def artisan_metadata(unit, events):
+    return ["Date:",
+            "Unit:%s" % unit,
+            "CHARGE:%s" % seconds_elapsed_to_time(events.charge),
+            "TP:%s" % seconds_elapsed_to_time(events.tp),
+            "DRYe:",
+            "FCs:%s" % seconds_elapsed_to_time(events.fc),
+            "FCe:",
+            "SCs:%s" % seconds_elapsed_to_time(events.sc),
+            "SCe:",
+            "DROP:%s" % seconds_elapsed_to_time(events.drop),
+            "COOL:",
             "Time:"]
 
 
-def transform_data(row):
+def transform_data(row, events, event=None):
     seconds_elapsed = int(row[0])
-    time1 = '%02d:%02d' % (seconds_elapsed//60, seconds_elapsed%60)
+    time1 = seconds_elapsed_to_time(seconds_elapsed)
     time2 = None
-    bt = et = float(row[1])
-    event = None
+    bt = float(row[1])
+    et = float(row[7])
+    event = event if event else events.from_elapsed(seconds_elapsed)
+    wind = float(row[2])
+    fire = float(row[3])
+    ror = float(row[4])
+    rpm = float(row[5])
+    hum = float(row[6])
+    pressure = float(row[8])
 
-    return [time1, time2, bt, et, event]
+    return [time1, time2, bt, et, event, wind, fire, ror, rpm, hum, pressure]
+
+
+def seconds_elapsed_to_time(seconds_elapsed):
+    return '%02d:%02d' % (seconds_elapsed // 60, seconds_elapsed % 60)
+
+
+def process_headers(writer, headers, unit):
+    tp_elapsed = int(headers[17])
+    fc_elapsed = int(headers[19])
+    sc_elapsed = int(headers[21])
+    drop_elapsed = int(headers[23])
+    events = Events(CHARGE_ELAPSED, tp_elapsed, fc_elapsed, sc_elapsed, drop_elapsed)
+    writer.writerow(artisan_metadata(unit, events))
+    return events
 
 
 def main(in_file_path, suffix, extension, unit):
@@ -31,11 +86,17 @@ def main(in_file_path, suffix, extension, unit):
     with open(in_file, 'r') as rf, open(out_file, 'w') as wf:
         reader = csv.reader(rf, delimiter=',')
         writer = csv.writer(wf, delimiter='\t', lineterminator='\n')
-        _ = next(reader)  # useless headers
-        writer.writerow(metadata(unit))
+        rubasse_headers = next(reader)
+        events = process_headers(writer, rubasse_headers, unit)
         writer.writerow(HEADERS)
-        for row in reader:
-            writer.writerow(transform_data(row))
+
+        previous_row = next(reader)
+        for current_row in reader:
+            writer.writerow(transform_data(previous_row, events))
+            previous_row = current_row
+
+        # different handling for last row
+        writer.writerow(transform_data(previous_row, events, event="Drop"))
 
 
 if __name__ == '__main__':
